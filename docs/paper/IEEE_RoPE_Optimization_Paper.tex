@@ -20,8 +20,6 @@ Email: mina.iskandar@university.edu}}
 
 \maketitle
 
-\thispagestyle{empty}
-
 \begin{abstract}
 Rotary Position Embeddings (RoPE) have become the de facto standard for position encoding in modern large language models (LLMs) such as LLaMA, Mistral, and Gemma \cite{su2021}. While RoPE provides superior performance compared to traditional position encoding methods, its computational overhead during inference remains a significant bottleneck for real-time applications \cite{chen2024}. This paper presents a comprehensive analysis of RoPE optimization strategies for efficient LLM inference. Through systematic experimentation, we demonstrate that pre-computed rotation tables achieve a 3.55x speedup with only 16 MB cache overhead for standard configurations. We analyze the trade-offs between cache size, hit rate, and performance across different model sizes (d\_model = 256--2048) and scaling methods (none, linear, NTK). Our experiments reveal that NTK-aware scaling provides the best balance between computation time and long-context performance, while cache hit rates above 50\% yield diminishing returns. We propose an adaptive caching strategy that dynamically adjusts cache size based on context length, achieving up to 43.29x speedup for short contexts while maintaining competitive performance for long contexts. These optimizations are particularly relevant for LLM deployment on consumer hardware, where memory and compute constraints are prevalent.
 
