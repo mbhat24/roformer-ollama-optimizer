@@ -6,7 +6,6 @@ for use with ollama's LLM inference.
 """
 
 import numpy as np
-import torch
 import math
 from typing import Tuple, Optional, Dict
 from dataclasses import dataclass
@@ -59,18 +58,28 @@ class RoPEAnalyzer:
     def _apply_ntk_scaling(self, theta: np.ndarray, position: int) -> np.ndarray:
         """Apply NTK-aware scaling for long contexts."""
         alpha = self.config.ntk_alpha
-        scale = alpha * (position / self.config.max_position) ** (self.config.d_model / (self.config.d_model - 2))
+        # Avoid division by zero by ensuring position > 0
+        position_safe = max(position, 1)
+        scale = alpha * (position_safe / self.config.max_position) ** (self.config.d_model / (self.config.d_model - 2))
+        # Clamp scale to avoid division by zero or extreme values
+        scale = max(scale, 1e-10)
         return theta / scale
     
     def _apply_linear_scaling(self, theta: np.ndarray, position: int) -> np.ndarray:
         """Apply linear scaling."""
-        scale = position / self.config.max_position
+        # Avoid division by zero by ensuring position > 0
+        position_safe = max(position, 1)
+        scale = position_safe / self.config.max_position
+        # Clamp scale to avoid division by zero
+        scale = max(scale, 1e-10)
         return theta / scale
     
     def _apply_yarn_scaling(self, theta: np.ndarray, position: int) -> np.ndarray:
         """Apply YaRN scaling (simplified version)."""
         # YaRN is complex; this is a simplified placeholder
-        scale = 1.0 + (position / self.config.max_position) ** 0.5
+        scale = 1.0 + (max(position, 1) / self.config.max_position) ** 0.5
+        # Clamp scale to avoid division by zero
+        scale = max(scale, 1e-10)
         return theta / scale
     
     def compute_rotation_matrix(self, position: int) -> np.ndarray:
