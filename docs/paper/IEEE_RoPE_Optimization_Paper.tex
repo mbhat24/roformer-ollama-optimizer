@@ -21,26 +21,26 @@ Email: mina.iskandar@university.edu}}
 \maketitle
 
 \begin{abstract}
-Rotary Position Embeddings (RoPE) have become the de facto standard for position encoding in modern large language models (LLMs) such as LLaMA, Mistral, and Gemma \cite{liu2022}. While RoPE provides superior performance compared to traditional position encoding methods, its computational overhead during inference remains a significant bottleneck for real-time applications \cite{chen2024}. This paper presents a comprehensive analysis of RoPE optimization strategies for efficient LLM inference. Through systematic experimentation, we demonstrate that pre-computed rotation tables achieve a 4.87x speedup with only 16 MB cache overhead for standard configurations. We analyze the trade-offs between cache size, hit rate, and performance across different model sizes (d\_model = 256--2048) and scaling methods (none, linear, NTK). Our experiments reveal that NTK-aware scaling provides the best balance between computation time and long-context performance, while cache hit rates above 50\% yield diminishing returns. We propose an adaptive caching strategy that dynamically adjusts cache size based on context length, achieving up to 57.28x speedup for short contexts while maintaining competitive performance for long contexts. These optimizations are particularly relevant for ollama-based LLM deployment on consumer hardware, where memory and compute constraints are prevalent.
+Rotary Position Embeddings (RoPE) have become the de facto standard for position encoding in modern large language models (LLMs) such as LLaMA, Mistral, and Gemma \cite{su2021}. While RoPE provides superior performance compared to traditional position encoding methods, its computational overhead during inference remains a significant bottleneck for real-time applications \cite{chen2024}. This paper presents a comprehensive analysis of RoPE optimization strategies for efficient LLM inference. Through systematic experimentation, we demonstrate that pre-computed rotation tables achieve a 3.55x speedup with only 16 MB cache overhead for standard configurations. We analyze the trade-offs between cache size, hit rate, and performance across different model sizes (d\_model = 256--2048) and scaling methods (none, linear, NTK). Our experiments reveal that NTK-aware scaling provides the best balance between computation time and long-context performance, while cache hit rates above 50\% yield diminishing returns. We propose an adaptive caching strategy that dynamically adjusts cache size based on context length, achieving up to 43.29x speedup for short contexts while maintaining competitive performance for long contexts. These optimizations are particularly relevant for LLM deployment on consumer hardware, where memory and compute constraints are prevalent.
 
 \end{abstract}
 
 \begin{IEEEkeywords}
-RoPE, rotary position embeddings, LLM inference, optimization, caching, NTK scaling, ollama
+RoPE, rotary position embeddings, LLM inference, optimization, caching, NTK scaling
 \end{IEEEkeywords}
 
 \section{Introduction}
 
-Large language models (LLMs) have revolutionized natural language processing, but their deployment on resource-constrained hardware remains challenging \cite{su2021}. Position encoding is a critical component of transformer architectures, enabling models to understand token relationships within sequences \cite{vaswani2017}. Traditional absolute position encodings suffer from limited extrapolation to longer contexts, while relative position encodings require expensive lookup tables \cite{shaw2023}.
+Large language models (LLMs) have revolutionized natural language processing, but their deployment on resource-constrained hardware remains challenging \cite{touvron2023}. Position encoding is a critical component of transformer architectures, enabling models to understand token relationships within sequences \cite{vaswani2017}. Traditional absolute position encodings suffer from limited extrapolation to longer contexts, while relative position encodings require expensive lookup tables \cite{shaw2023}.
 
 Rotary Position Embeddings (RoPE) emerged as a breakthrough solution, encoding positional information through rotation matrices \cite{su2021}. RoPE provides relative position awareness without lookup tables, smooth extrapolation to longer contexts, and has been adopted by state-of-the-art models including LLaMA-2/3, Mistral, and Gemma \cite{touvron2023}. However, RoPE computation involves expensive trigonometric operations (sin, cos) for each dimension pair, creating a bottleneck during inference \cite{chen2024}.
 
-This work addresses the optimization of RoPE for efficient LLM inference, particularly for ollama-based deployments on consumer hardware. Our contributions include:
+This work addresses the optimization of RoPE for efficient LLM inference, particularly for deployment on consumer hardware. Our contributions include:
 1. Comprehensive performance profiling of RoPE across different configurations
 2. Evaluation of pre-computed rotation tables with cache size optimization
 3. Analysis of scaling methods (none, linear, NTK) for long-context scenarios
 4. An adaptive caching strategy that balances speedup and memory overhead
-5. Experimental validation showing up to 45.91x speedup for short contexts
+5. Experimental validation showing up to 43.29x speedup for short contexts
 
 \section{Background}
 
@@ -105,16 +105,16 @@ Table I shows baseline RoPE performance with $d_{model}=512$ and no scaling.
 \hline
 \textbf{Metric} & \textbf{Value} & \textbf{Unit} \\
 \hline
-Standard computation & 0.8098 & ms/token \\
-Cached computation & 0.1663 & ms/token \\
-Speedup & 4.87x & -- \\
+Standard computation & 0.6547 & ms/token \\
+Cached computation & 0.1844 & ms/token \\
+Speedup & 3.55x & -- \\
 Cache size & 16.00 & MB \\
 Angle oscillations & 6925 & -- \\
 \hline
 \end{tabular}
 \end{table}
 
-Pre-computed rotation tables achieve a 4.87x speedup with only 16 MB cache overhead, demonstrating significant potential for optimization.
+Pre-computed rotation tables achieve a 3.55x speedup with only 16 MB cache overhead, demonstrating significant potential for optimization.
 
 \subsection{Scaling Method Comparison}
 
@@ -127,9 +127,9 @@ Table II compares different scaling methods for long-context scenarios.
 \hline
 \textbf{Scaling Method} & \textbf{Time (ms/token)} \\
 \hline
-None & 0.5307 \\
-Linear & 0.5284 \\
-NTK-aware & 0.5267 \\
+None & 0.6226 \\
+Linear & 0.6019 \\
+NTK-aware & 0.5573 \\
 \hline
 \end{tabular}
 \end{table}
@@ -147,10 +147,10 @@ Table III shows performance scaling with model dimension.
 \hline
 \textbf{$d_{model}$} & \textbf{Time (ms/token)} & \textbf{Cache (MB)} \\
 \hline
-256 & 0.2656 & 8.00 \\
-512 & 0.5302 & 16.00 \\
-1024 & 1.0520 & 32.00 \\
-2048 & 2.0997 & 64.00 \\
+256 & 0.2961 & 8.00 \\
+512 & 0.5566 & 16.00 \\
+1024 & 1.2241 & 32.00 \\
+2048 & 2.3489 & 64.00 \\
 \hline
 \end{tabular}
 \end{table}
@@ -168,16 +168,16 @@ Table IV analyzes cache performance across different cache sizes.
 \hline
 \textbf{Cache Size} & \textbf{Hit Rate} & \textbf{Speedup} \\
 \hline
-256 & 6.13\% & 57.28x \\
-512 & 12.52\% & 25.93x \\
-1024 & 25.05\% & 12.83x \\
-2048 & 49.69\% & 6.22x \\
-4096 & 100.00\% & 3.16x \\
+256 & 6.42\% & 43.29x \\
+512 & 12.90\% & 25.48x \\
+1024 & 24.75\% & 12.81x \\
+2048 & 50.25\% & 6.27x \\
+4096 & 100.00\% & 3.19x \\
 \hline
 \end{tabular}
 \end{table}
 
-Small caches yield high speedup when they hit (57.28x for cache size 256), but have low hit rates (6.13\%). Larger caches have higher hit rates but lower speedup per access. The optimal cache size depends on expected context length distribution.
+Small caches yield high speedup when they hit (43.29x for cache size 256), but have low hit rates (6.42\%). Larger caches have higher hit rates but lower speedup per access. The optimal cache size depends on expected context length distribution.
 
 \section{Discussion}
 
@@ -187,7 +187,7 @@ Our experiments reveal several key trade-offs:
 
 \textbf{Speed vs. Memory:} Larger caches provide higher hit rates but consume more memory. For consumer hardware with limited RAM, cache sizes of 1024--2048 provide the best balance (25--50\% hit rate, 6--12x speedup).
 
-\textbf{Short vs. Long Contexts:} For short contexts (<1024 tokens), small caches (256--512) provide excellent speedup (27--45x). For long contexts (>4096 tokens), full caching (4096) is necessary for acceptable performance.
+\textbf{Short vs. Long Contexts:} For short contexts (<1024 tokens), small caches (256--512) provide excellent speedup (25--43x). For long contexts (>4096 tokens), full caching (4096) is necessary for acceptable performance.
 
 \textbf{Scaling Method Selection:} NTK-aware scaling provides consistent performance across context lengths with minimal computational overhead.
 
@@ -199,27 +199,28 @@ Based on our analysis, we propose an adaptive caching strategy:
 3. Pre-compute rotation matrices for selected cache size
 4. Fall back to on-the-fly computation for cache misses
 
-This strategy achieves up to 45.91x speedup for short contexts while maintaining competitive performance for long contexts.
+This strategy achieves up to 43.29x speedup for short contexts while maintaining competitive performance for long contexts.
 
 \subsection{Limitations}
 
-Our experiments used synthetic data and did not profile actual ollama inference. Real-world performance may differ due to:
+Our experiments used synthetic data to profile RoPE computation in isolation. Real-world performance may differ due to:
 - GPU vs CPU architecture differences
 - Model-specific optimizations
 - I/O and memory bandwidth constraints
 - Batch processing effects
+- Integration with actual LLM inference pipelines
 
-Future work should validate these optimizations on actual ollama deployments.
+Future work should validate these optimizations on actual LLM deployments and integrate with inference frameworks like ollama.
 
 \section{Conclusion}
 
-We presented a comprehensive analysis of RoPE optimization strategies for efficient LLM inference. Our experiments demonstrate that pre-computed rotation tables achieve 4.87x speedup with minimal memory overhead, while adaptive caching can achieve up to 57.28x speedup for short contexts. NTK-aware scaling provides the best performance for long-context scenarios. These optimizations are particularly valuable for ollama-based LLM deployment on consumer hardware, where memory and compute constraints are prevalent.
+We presented a comprehensive analysis of RoPE optimization strategies for efficient LLM inference. Our experiments demonstrate that pre-computed rotation tables achieve 3.55x speedup with minimal memory overhead, while adaptive caching can achieve up to 43.29x speedup for short contexts. NTK-aware scaling provides the best performance for long-context scenarios. These optimizations are particularly valuable for LLM deployment on consumer hardware, where memory and compute constraints are prevalent.
 
-\textbf{Future work:} Integration with ollama's inference pipeline, GPU-accelerated RoPE computation, and validation on real-world LLM workloads.
+\textbf{Future work:} Integration with LLM inference pipelines, GPU-accelerated RoPE computation, and validation on real-world LLM workloads.
 
 \section*{Acknowledgments}
 
-We thank the RoFormer research team for their pioneering work on rotary position embeddings. We acknowledge the ollama community for providing an accessible LLM inference platform.
+We thank the RoFormer research team for their pioneering work on rotary position embeddings. We acknowledge the open-source LLM community for providing accessible inference platforms.
 
 \begin{thebibliography}{99}
 
